@@ -71,6 +71,7 @@ EOF
 
 # Use configure.sh as preinst script
 cp "$PROJECT_DIR/scripts/configure.sh" "$DEBIAN_DIR/preinst"
+chmod 755 "$DEBIAN_DIR/preinst"
 
 # Create postinst script
 cat > "$DEBIAN_DIR/postinst" << EOF
