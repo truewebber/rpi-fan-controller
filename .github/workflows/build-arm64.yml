@@ -2,9 +2,9 @@ name: Build ARM64 Package
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
@@ -57,7 +57,7 @@ jobs:
         path: artifacts/*.deb
         
     - name: Create Release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       id: create_release
       uses: softprops/action-gh-release@v1
       with:
