@@ -281,22 +281,24 @@ Two workflows are provided:
    - Uses Ubuntu runner with cross-compilation tools
    - Builds the binary using aarch64-linux-gnu-gcc
    - Creates a Debian package for ARM64
+   - Automatically adds any missing header includes (like stdarg.h)
 
 2. **Docker-based Build** (.github/workflows/build-arm64-docker.yml):
    - Uses QEMU and Docker to build in an ARM64 environment
    - More reliable emulation of the target platform
    - Creates a Debian package in a controlled environment
+   - Ensures all necessary dependencies are available in the build environment
 
 The workflows are triggered:
-- On push to the main branch
-- On pull requests to the main branch
+- On push to the master branch
+- On pull requests to the master branch
 - Manually via the GitHub Actions interface
 
 ### Artifacts and Releases
 
 Both workflows:
 - Upload the Debian package as a build artifact
-- Create a GitHub Release with the package when pushed to main
+- Create a GitHub Release with the package when pushed to master
 
 To download the latest package:
 1. Go to the "Actions" tab in the GitHub repository

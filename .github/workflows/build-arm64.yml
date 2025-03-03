@@ -28,6 +28,14 @@ jobs:
       with:
         platforms: arm64
         
+    - name: Check source code for stdarg.h inclusion
+      run: |
+        # Check if stdarg.h is included in the source file
+        if ! grep -q "#include <stdarg.h>" rpi5_client/src/fan_temp_daemon.c; then
+          echo "Adding missing stdarg.h include to source file"
+          sed -i '1s/^/#include <stdarg.h>\n/' rpi5_client/src/fan_temp_daemon.c
+        fi
+        
     - name: Build ARM64 binary
       run: |
         # Create a build directory
