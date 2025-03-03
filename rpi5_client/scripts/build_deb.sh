@@ -124,16 +124,17 @@ systemctl daemon-reload
 exit 0
 EOF
 
-# Make scripts executable
-chmod 755 "$DEBIAN_DIR/preinst"
-chmod 755 "$DEBIAN_DIR/postinst"
-chmod 755 "$DEBIAN_DIR/prerm"
-chmod 755 "$DEBIAN_DIR/postrm"
 
 # Set permissions
 find "$PACKAGE_DIR" -type d -exec chmod 755 {} \;
-find "$PACKAGE_DIR" -type f -exec chmod 644 {} \;
+find "$PACKAGE_DIR" -type f -exec chmod 0644 {} \;
 chmod 755 "$BIN_DIR/fan_temp_daemon"
+
+# Make scripts executable
+chmod 0755 "$DEBIAN_DIR/preinst"
+chmod 0755 "$DEBIAN_DIR/postinst"
+chmod 0755 "$DEBIAN_DIR/prerm"
+chmod 0755 "$DEBIAN_DIR/postrm"
 
 # Build the package
 echo "Building Debian package..."
