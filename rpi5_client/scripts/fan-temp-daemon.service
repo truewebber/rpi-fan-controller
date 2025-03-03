@@ -1,0 +1,13 @@
+[Unit]
+Description=Raspberry Pi Fan Temperature Daemon
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/fan_temp_daemon
+Restart=on-failure
+RestartSec=5
+EnvironmentFile=/etc/fan-temp-daemon/config
+
+[Install]
+WantedBy=multi-user.target 

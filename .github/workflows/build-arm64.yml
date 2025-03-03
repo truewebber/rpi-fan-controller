@@ -1,0 +1,70 @@
+name: Build ARM64 Package
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential crossbuild-essential-arm64 qemu-user-static
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+      with:
+        platforms: arm64
+        
+    - name: Build ARM64 binary
+      run: |
+        # Create a build directory
+        mkdir -p rpi5_client/bin
+        
+        # Cross-compile for ARM64
+        cd rpi5_client
+        CC=aarch64-linux-gnu-gcc CFLAGS="-static" make
+        
+        # Verify the binary architecture
+        file bin/fan_temp_daemon
+        
+    - name: Build Debian package
+      run: |
+        # Build the Debian package
+        cd rpi5_client
+        ./scripts/build_deb.sh
+        
+        # Move the package to a predictable location
+        mkdir -p artifacts
+        mv rpi5-fan-temp-daemon-*.deb artifacts/
+        
+    - name: Upload Debian package
+      uses: actions/upload-artifact@v3
+      with:
+        name: rpi5-fan-temp-daemon-arm64
+        path: artifacts/*.deb
+        
+    - name: Create Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: artifacts/*.deb
+        name: Release ${{ github.ref_name }}
+        tag_name: v${{ github.run_number }}
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
