@@ -51,7 +51,7 @@ jobs:
         mv rpi5-fan-temp-daemon-*.deb artifacts/
         
     - name: Upload Debian package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: rpi5-fan-temp-daemon-arm64
         path: artifacts/*.deb
