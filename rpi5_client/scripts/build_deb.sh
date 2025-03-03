@@ -143,6 +143,10 @@ dpkg-deb --build "$PACKAGE_DIR"
 # Move the package to the project root
 mv "$BUILD_DIR/$PACKAGE_NAME-$PACKAGE_VERSION.deb" "$PROJECT_DIR/$PACKAGE_NAME-$PACKAGE_VERSION.deb"
 
+# Set appropriate permissions for the package file
+# This ensures the package can be accessed by the _apt user during installation
+chmod 0644 "$PROJECT_DIR/$PACKAGE_NAME-$PACKAGE_VERSION.deb"
+
 echo ""
 echo "Debian package created successfully: $PROJECT_DIR/$PACKAGE_NAME-$PACKAGE_VERSION.deb"
 echo ""
