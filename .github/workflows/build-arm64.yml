@@ -55,8 +55,8 @@ jobs:
         ./scripts/build_deb.sh
         
         # Move the package to a predictable location
-        mkdir -p artifacts
-        mv rpi5-fan-temp-daemon-*.deb artifacts/
+        mkdir -p ../artifacts
+        mv rpi5-fan-temp-daemon-*.deb ../artifacts/
         
     - name: Upload Debian package
       uses: actions/upload-artifact@v4
