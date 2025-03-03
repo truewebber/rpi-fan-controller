@@ -14,7 +14,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PACKAGE_NAME="rpi5-fan-temp-daemon"
 PACKAGE_VERSION="1.0.0"
 PACKAGE_ARCH="arm64"
-PACKAGE_MAINTAINER="Your Name <your.email@example.com>"
+PACKAGE_MAINTAINER="Aleksei Kish <kish94@mail.ru>"
 PACKAGE_DESCRIPTION="Raspberry Pi 5 Fan Temperature Daemon"
 PACKAGE_DEPENDS="systemd, smartmontools"
 

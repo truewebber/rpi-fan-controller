@@ -16,6 +16,15 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Check for required dependencies
+echo "Checking for required dependencies..."
+if ! command -v smartctl &> /dev/null; then
+    echo "Error: smartmontools is not installed"
+    echo "Please install it with: sudo apt-get install -y smartmontools"
+    echo "Or install the package with dependencies: sudo apt-get install -f"
+    exit 1
+fi
+
 # Configuration directory and file
 CONFIG_DIR="/etc/fan-temp-daemon"
 CONFIG_FILE="$CONFIG_DIR/config"
@@ -72,13 +81,6 @@ fi
 echo "Auto-detecting NVME temperature command..."
 NVME_CMD=""
 NVME_DEVICE=""
-
-# Check if smartmontools is installed
-if ! command -v smartctl &> /dev/null; then
-    echo "Installing smartmontools for NVME temperature monitoring..."
-    apt-get update
-    apt-get install -y smartmontools
-fi
 
 # Find NVME devices
 for device in /dev/nvme?; do

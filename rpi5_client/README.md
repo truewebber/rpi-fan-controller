@@ -20,7 +20,8 @@ This daemon is designed to work with the [Raspberry Pi 5 Fan Controller](https:/
 - Raspberry Pi 5
 - Serial connection to Arduino fan controller (UART pins or USB-to-Serial adapter)
 - Build dependencies: `build-essential`
-- Runtime dependencies: Automatically installed by the configuration script as needed
+- Runtime dependencies:
+  - `systemd` (for service management)
   - `smartmontools` (for NVME temperature monitoring)
 
 ## Installation
@@ -129,9 +130,9 @@ sudo ./scripts/configure.sh
 
 The configuration script:
 - Requires root privileges
+- Checks for required dependencies (smartmontools)
 - Automatically detects CPU and NVME temperature commands
 - Tests the commands to ensure they work correctly
-- Installs any necessary runtime dependencies (like `smartmontools` for NVME monitoring)
 - Creates or overwrites the configuration file with appropriate values
 - Restarts the service if it's already installed
 
