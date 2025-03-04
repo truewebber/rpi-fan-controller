@@ -12,7 +12,7 @@ void updateFanSpeed();
 void printTemperatureSummary();
 
 // --- Serial Communication Speed ---
-const long BAUD_RATE = 115200;  // Increased from 9600 to 115200
+const long BAUD_RATE = 57600;  // Reduced from 115200 to 57600 for more reliable communication
 
 // --- Pin Definitions for Arduino Pro Mini ---
 const int fanPWMPin = 9;    // PWM output for fan control (pin 9 supports PWM)
@@ -98,15 +98,15 @@ void calculateRPM() {
 
 // --- Parse temperature data from devices ---
 void parseTemperatureData(int deviceId, String data) {
-  // Expected format: CPU=xxx.xx,NVME=xxx.xx
+  // Expected format: CPU:xx.x|NVME:xx.x
   
   // Update last temperature update time
   lastTempUpdateTime[deviceId] = millis();
   deviceConnected[deviceId] = true;
   
-  // Find the position of the CPU= and NVME= markers
-  int cpuPos = data.indexOf("CPU=");
-  int nvmePos = data.indexOf(",NVME=");
+  // Find the position of the CPU: and |NVME: markers
+  int cpuPos = data.indexOf("CPU:");
+  int nvmePos = data.indexOf("|NVME:");
   
   if (cpuPos != -1 && nvmePos != -1) {
     // Extract CPU temperature
@@ -208,6 +208,9 @@ void processSerialResponse(int deviceId, String response) {
   Serial.print(" sent: ");
   Serial.println(response);
   
+  // Clean the response by removing any whitespace and line endings
+  response.trim();
+  
   // CPU:xx.x|NVME:xx.x (temperature data)
   if (response.startsWith("CPU:") && response.indexOf("|NVME:") != -1) {
     // This is temperature data
@@ -272,17 +275,27 @@ void pollDevices() {
   if (currentPollingDevice >= 0) {
     // If we haven't sent a command to the current device yet
     if (!deviceResponded[currentPollingDevice] && commandSentTime == 0) {
+      // Stop listening on all ports
+      for (int i = 0; i < NUM_DEVICES; i++) {
+        devices[i]->stopListening();
+      }
+      
+      // Start listening on current device
+      devices[currentPollingDevice]->listen();
+      
       // Send poll command to current device
       devices[currentPollingDevice]->println("POLL");
       commandSentTime = currentMillis;
       Serial.print("Polling device ");
-      Serial.println(currentPollingDevice + 1);
+      Serial.print(currentPollingDevice + 1);
+      Serial.println(" (sent: POLL)");
     }
 
     // Check if the current device has data available
     if (devices[currentPollingDevice]->available()) {
       char c = devices[currentPollingDevice]->read();
       if (c == '\n') {
+        // Process the complete response
         processSerialResponse(currentPollingDevice, incomingData[currentPollingDevice]);
         incomingData[currentPollingDevice] = "";
         deviceResponded[currentPollingDevice] = true;
@@ -327,6 +340,23 @@ void setup() {
   device2.begin(BAUD_RATE);
   device3.begin(BAUD_RATE);
   device4.begin(BAUD_RATE);
+  
+  // Stop listening on all ports initially
+  device1.stopListening();
+  device2.stopListening();
+  device3.stopListening();
+  device4.stopListening();
+  
+  // Debug: Print SoftwareSerial initialization
+  Serial.println("SoftwareSerial initialization:");
+  for(int i = 0; i < NUM_DEVICES; i++) {
+    Serial.print("Device ");
+    Serial.print(i + 1);
+    Serial.print(": listening=");
+    Serial.print(devices[i]->isListening());
+    Serial.print(" baud=");
+    Serial.println(BAUD_RATE);
+  }
   
   // Initialize pins
   pinMode(fanPWMPin, OUTPUT);
