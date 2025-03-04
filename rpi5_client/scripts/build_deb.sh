@@ -12,11 +12,13 @@ echo "Building Debian package for Raspberry Pi Fan Temperature Daemon..."
 SCRIPT_DIR="$(dirname "$0")"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PACKAGE_NAME="rpi5-fan-temp-daemon"
-PACKAGE_VERSION="1.0.0"
+PACKAGE_VERSION="${VERSION:-1.0.0}"  # Use VERSION env var if set, otherwise default to 1.0.0
 PACKAGE_ARCH="arm64"
 PACKAGE_MAINTAINER="Aleksei Kish <kish94@mail.ru>"
 PACKAGE_DESCRIPTION="Raspberry Pi 5 Fan Temperature Daemon"
 PACKAGE_DEPENDS="systemd, smartmontools"
+
+echo "Building Debian package version: $PACKAGE_VERSION"
 
 # Create temporary build directory
 BUILD_DIR="$PROJECT_DIR/build/deb"
@@ -158,4 +160,4 @@ echo "To remove the package:"
 echo "  sudo apt-get remove $PACKAGE_NAME"
 echo ""
 echo "To completely remove the package including configuration:"
-echo "  sudo apt-get purge $PACKAGE_NAME" 
+echo "  sudo apt-get purge $PACKAGE_NAME"

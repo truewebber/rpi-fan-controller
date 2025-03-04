@@ -25,6 +25,33 @@ if ! command -v smartctl &> /dev/null; then
     exit 1
 fi
 
+# Auto-detect serial port
+echo "Auto-detecting GPIO UART port..."
+SERIAL_PORT=""
+
+# Check for primary UART (ttyAMA0) which is typically connected to GPIO pins
+if [ -e "/dev/ttyAMA0" ]; then
+    if [ -r "/dev/ttyAMA0" ] && [ -w "/dev/ttyAMA0" ]; then
+        SERIAL_PORT="/dev/ttyAMA0"
+        echo "Found primary GPIO UART port: $SERIAL_PORT"
+    fi
+fi
+
+# If primary UART not found, check for serial0 (which is often symlinked to ttyAMA0)
+if [ -z "$SERIAL_PORT" ] && [ -e "/dev/serial0" ]; then
+    if [ -r "/dev/serial0" ] && [ -w "/dev/serial0" ]; then
+        SERIAL_PORT="/dev/serial0"
+        echo "Found GPIO UART port (serial0): $SERIAL_PORT"
+    fi
+fi
+
+# If still no port found, use a default
+if [ -z "$SERIAL_PORT" ]; then
+    SERIAL_PORT="/dev/ttyAMA0"
+    echo "Warning: Could not auto-detect GPIO UART port"
+    echo "Using default: $SERIAL_PORT"
+fi
+
 # Configuration directory and file
 CONFIG_DIR="/etc/fan-temp-daemon"
 CONFIG_FILE="$CONFIG_DIR/config"
@@ -33,8 +60,8 @@ CONFIG_FILE="$CONFIG_DIR/config"
 mkdir -p "$CONFIG_DIR"
 
 # Set default values for most parameters
-FAN_TEMP_SERIAL_PORT="/dev/serial0"
-FAN_TEMP_BAUD_RATE="115200"
+FAN_TEMP_SERIAL_PORT="$SERIAL_PORT"
+FAN_TEMP_BAUD_RATE="57600"
 FAN_TEMP_READ_TIMEOUT="1"
 FAN_TEMP_LOG_TO_SYSLOG="1"
 FAN_TEMP_FOREGROUND="0"
@@ -159,4 +186,4 @@ if [ -f "/etc/systemd/system/fan-temp-daemon.service" ]; then
 else
     echo "Fan temperature daemon service is not yet installed."
     echo "To install the daemon, run: ./scripts/install.sh"
-fi 
+fi

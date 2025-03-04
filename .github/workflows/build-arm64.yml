@@ -2,9 +2,8 @@ name: Build ARM64 Package
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    tags:
+      - 'v*'  # Trigger on version tags
   workflow_dispatch:  # Allow manual triggering
 
 permissions:
@@ -13,14 +12,16 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-      
+      with:
+        fetch-depth: 0  # Fetch all history for tags
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
-      
+
     - name: Install dependencies
       run: |
         sudo apt-get update
@@ -30,51 +31,49 @@ jobs:
       uses: docker/setup-qemu-action@v2
       with:
         platforms: arm64
-        
-    - name: Check source code for stdarg.h inclusion
+
+    - name: Get version from tag
+      id: get_version
       run: |
-        # Check if stdarg.h is included in the source file
-        if ! grep -q "#include <stdarg.h>" rpi5_client/src/fan_temp_daemon.c; then
-          echo "Adding missing stdarg.h include to source file"
-          sed -i '1s/^/#include <stdarg.h>\n/' rpi5_client/src/fan_temp_daemon.c
-        fi
-        
+        # Remove 'v' prefix from tag name
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
     - name: Build ARM64 binary
       run: |
         # Create a build directory
         mkdir -p rpi5_client/bin
-        
+
         # Cross-compile for ARM64
         cd rpi5_client
         CC=aarch64-linux-gnu-gcc CFLAGS="-static" make
-        
+
         # Verify the binary architecture
         file bin/fan_temp_daemon
-        
+
     - name: Build Debian package
       run: |
-        # Build the Debian package
+        # Build the Debian package with version from tag
         cd rpi5_client
-        ./scripts/build_deb.sh
-        
+        VERSION=${{ steps.get_version.outputs.version }} ./scripts/build_deb.sh
+
         # Move the package to a predictable location
         mkdir -p ../artifacts
         mv rpi5-fan-temp-daemon-*.deb ../artifacts/
-        
+
     - name: Upload Debian package
       uses: actions/upload-artifact@v4
       with:
         name: rpi5-fan-temp-daemon-arm64
         path: artifacts/*.deb
-        
+
     - name: Create Release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       uses: softprops/action-gh-release@v1
       with:
         files: artifacts/*.deb
-        name: Release ${{ github.ref_name }}
-        tag_name: v${{ github.run_number }}
+        name: Release ${{ steps.get_version.outputs.version }}
+        tag_name: v${{ steps.get_version.outputs.version }}
         draft: false
         prerelease: false
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
