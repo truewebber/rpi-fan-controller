@@ -17,6 +17,7 @@
  * Raspberry Pi OS and other Linux distributions.
  */
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,6 +66,7 @@ void load_environment_config(void);
 speed_t parse_baud_rate(const char *baud_str);
 int check_required_env_vars(void);
 void run_daemon(void);
+void clean_buffer(char *buffer);
 
 /**
  * Check if all required environment variables are set
@@ -481,6 +483,25 @@ void log_message(int priority, const char *format, ...) {
 }
 
 /**
+ * Clean received buffer by removing whitespace and line endings
+ */
+void clean_buffer(char *buffer) {
+    char *end;
+    
+    // Remove trailing whitespace and line endings
+    end = buffer + strlen(buffer) - 1;
+    while (end > buffer && (*end == '\n' || *end == '\r' || *end == ' ' || *end == '\t')) {
+        *end = '\0';
+        end--;
+    }
+    
+    // Remove leading whitespace
+    while (*buffer && (*buffer == ' ' || *buffer == '\t')) {
+        buffer++;
+    }
+}
+
+/**
  * Run the daemon
  */
 void run_daemon(void) {
@@ -511,14 +532,12 @@ void run_daemon(void) {
         if (bytes_read > 0) {
             buffer[bytes_read] = '\0';  // Null-terminate the string
             
-            // Remove newline character if present
-            if (buffer[bytes_read-1] == '\n') {
-                buffer[bytes_read-1] = '\0';
-            }
-            
             if (verbose) {
                 log_message(LOG_DEBUG, "Received command: %s", buffer);
             }
+            
+            // Clean the buffer before comparison
+            clean_buffer(buffer);
             
             if (strcmp(buffer, "POLL") == 0) {
                 // Get current temperatures
