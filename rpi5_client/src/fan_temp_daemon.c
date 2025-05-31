@@ -555,6 +555,7 @@ void run_daemon(void) {
                 }
             }
         } else if (bytes_read < 0) {
+            log_message(LOG_ERR, "Error reading from serial port: %s", strerror(errno));
             // Error occurred, sleep briefly to avoid tight loop on error
             usleep(100000);  // 100ms
         }
