@@ -12,7 +12,8 @@ void updateFanSpeed();
 void printTemperatureSummary();
 
 // --- Serial Communication Speed ---
-const long BAUD_RATE = 57600;  // Reduced from 115200 to 57600 for more reliable communication
+// const long BAUD_RATE = 57600;
+const long BAUD_RATE = 38400;
 
 // --- Pin Definitions for Arduino Pro Mini ---
 const int fanPWMPin = 9;    // PWM output for fan control (pin 9 supports PWM)
@@ -283,8 +284,20 @@ void pollDevices() {
       // Start listening on current device
       devices[currentPollingDevice]->listen();
       
+      // Give some time for the port to stabilize after switching
+      delay(10);  // 10ms delay for port switching
+      
+      // Clear any stale data in the buffer
+      while (devices[currentPollingDevice]->available()) {
+        devices[currentPollingDevice]->read();
+      }
+      
       // Send poll command to current device
       devices[currentPollingDevice]->println("POLL");
+      
+      // Ensure data is sent before continuing
+      devices[currentPollingDevice]->flush();
+      
       commandSentTime = currentMillis;
       Serial.print("Polling device ");
       Serial.print(currentPollingDevice + 1);
