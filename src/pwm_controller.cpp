@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <stdio.h>
+#include <math.h>
 #include <SoftwareSerial.h>
 
 // Forward declarations
@@ -48,20 +49,22 @@ float cpuTemps[4] = {0.0, 0.0, 0.0, 0.0};
 float nvmeTemps[4] = {0.0, 0.0, 0.0, 0.0};
 boolean deviceConnected[4] = {false, false, false, false};
 unsigned long lastTempUpdateTime[4] = {0, 0, 0, 0};
-const unsigned long tempTimeout = 10000; // Consider device disconnected if no temp update for 10 seconds
+int missedPolls[4] = {0, 0, 0, 0}; // Counter for missed polls per device
+const int maxMissedPolls = 10; // Consider device disconnected after 10 missed polls
 
 // --- Temperature Thresholds for Fan Control ---
 // CPU temperature thresholds (in °C)
-const float CPU_TEMP_MIN = 45.0;   // Below this, fan at minimum speed
-const float CPU_TEMP_MAX = 75.0;   // Above this, fan at maximum speed
+const float CPU_TEMP_MIN = 40.0;   // Below this, fan at minimum speed
+const float CPU_TEMP_MAX = 60.0;   // Above this, fan at maximum speed
 
 // NVME temperature thresholds (in °C)
-const float NVME_TEMP_MIN = 50.0;  // Below this, fan at minimum speed
-const float NVME_TEMP_MAX = 80.0;  // Above this, fan at maximum speed
+const float NVME_TEMP_MIN = 40.0;  // Below this, fan at minimum speed
+const float NVME_TEMP_MAX = 65.0;  // Above this, fan at maximum speed
 
 // Fan speed settings
 const int FAN_SPEED_MIN = 30;      // Minimum PWM value (0-255)
 const int FAN_SPEED_MAX = 255;     // Maximum PWM value (0-255)
+const float FAN_CURVE_EXPONENT = 2.5;  // Parabolic curve exponent (>1 for aggressive cooling at high temps)
 
 // --- Tachometer Variables ---
 volatile unsigned int tachCount = 0;  // Incremented in the tachometer ISR
@@ -104,6 +107,7 @@ void parseTemperatureData(int deviceId, String data) {
   // Update last temperature update time
   lastTempUpdateTime[deviceId] = millis();
   deviceConnected[deviceId] = true;
+  missedPolls[deviceId] = 0; // Reset missed polls counter on successful data reception
   
   // Find the position of the CPU: and |NVME: markers
   int cpuPos = data.indexOf("CPU:");
@@ -137,11 +141,17 @@ void updateFanSpeed() {
   float highestCpuTemp = 0.0;
   float highestNvmeTemp = 0.0;
   bool anyDeviceConnected = false;
+  bool anyTemperatureData = false;
   
-  // Find the highest temperatures among connected devices
+  // Find the highest temperatures among all devices (using last saved values)
   for (int i = 0; i < NUM_DEVICES; i++) {
     if (deviceConnected[i]) {
       anyDeviceConnected = true;
+    }
+    
+    // Use saved temperature values even if device is currently disconnected
+    if (cpuTemps[i] > 0.0 || nvmeTemps[i] > 0.0) {
+      anyTemperatureData = true;
       if (cpuTemps[i] > highestCpuTemp) {
         highestCpuTemp = cpuTemps[i];
       }
@@ -151,11 +161,11 @@ void updateFanSpeed() {
     }
   }
   
-  // If no devices are connected, set fan to minimum speed
-  if (!anyDeviceConnected) {
+  // If no temperature data is available at all, set fan to minimum speed
+  if (!anyTemperatureData) {
     currentPwmValue = FAN_SPEED_MIN;
     analogWrite(fanPWMPin, currentPwmValue);
-    Serial.println("No devices connected. Fan set to minimum speed.");
+    Serial.println("No temperature data available. Fan set to minimum speed.");
     return;
   }
   
@@ -166,9 +176,10 @@ void updateFanSpeed() {
   } else if (highestCpuTemp >= CPU_TEMP_MAX) {
     cpuFanSpeed = FAN_SPEED_MAX;
   } else {
-    // Linear interpolation between min and max
+    // Parabolic curve for more aggressive cooling at higher temperatures
     float cpuTempRatio = (highestCpuTemp - CPU_TEMP_MIN) / (CPU_TEMP_MAX - CPU_TEMP_MIN);
-    cpuFanSpeed = FAN_SPEED_MIN + cpuTempRatio * (FAN_SPEED_MAX - FAN_SPEED_MIN);
+    float cpuCurvedRatio = pow(cpuTempRatio, FAN_CURVE_EXPONENT);
+    cpuFanSpeed = FAN_SPEED_MIN + cpuCurvedRatio * (FAN_SPEED_MAX - FAN_SPEED_MIN);
   }
   
   // Calculate fan speed based on NVME temperature
@@ -178,9 +189,10 @@ void updateFanSpeed() {
   } else if (highestNvmeTemp >= NVME_TEMP_MAX) {
     nvmeFanSpeed = FAN_SPEED_MAX;
   } else {
-    // Linear interpolation between min and max
+    // Parabolic curve for more aggressive cooling at higher temperatures
     float nvmeTempRatio = (highestNvmeTemp - NVME_TEMP_MIN) / (NVME_TEMP_MAX - NVME_TEMP_MIN);
-    nvmeFanSpeed = FAN_SPEED_MIN + nvmeTempRatio * (FAN_SPEED_MAX - FAN_SPEED_MIN);
+    float nvmeCurvedRatio = pow(nvmeTempRatio, FAN_CURVE_EXPONENT);
+    nvmeFanSpeed = FAN_SPEED_MIN + nvmeCurvedRatio * (FAN_SPEED_MAX - FAN_SPEED_MIN);
   }
   
   // Use the higher of the two calculated fan speeds
@@ -198,7 +210,23 @@ void updateFanSpeed() {
     Serial.print(highestCpuTemp);
     Serial.print("°C, NVME: ");
     Serial.print(highestNvmeTemp);
-    Serial.println("°C");
+    Serial.print("°C");
+    
+    // Show status of connected/disconnected devices
+    Serial.print(" | Devices: ");
+    for (int i = 0; i < NUM_DEVICES; i++) {
+      if (i > 0) Serial.print(",");
+      Serial.print(i + 1);
+      Serial.print(":");
+      if (deviceConnected[i]) {
+        Serial.print("ON");
+      } else if (cpuTemps[i] > 0.0 || nvmeTemps[i] > 0.0) {
+        Serial.print("OFF(saved)");
+      } else {
+        Serial.print("OFF");
+      }
+    }
+    Serial.println();
   }
 }
 
@@ -233,11 +261,18 @@ void printTemperatureSummary() {
       Serial.print(cpuTemps[i]);
       Serial.print("°C, NVME=");
       Serial.print(nvmeTemps[i]);
-      Serial.println("°C");
+      Serial.print("°C, missed=");
+      Serial.println(missedPolls[i]);
     } else {
       Serial.print("Device ");
       Serial.print(i + 1);
-      Serial.println(": Not connected");
+      Serial.print(": Not connected (missed=");
+      Serial.print(missedPolls[i]);
+      Serial.print(", last CPU=");
+      Serial.print(cpuTemps[i]);
+      Serial.print("°C, last NVME=");
+      Serial.print(nvmeTemps[i]);
+      Serial.println("°C)");
     }
   }
   Serial.print("Current Fan PWM: ");
@@ -252,18 +287,8 @@ void printTemperatureSummary() {
 void pollDevices() {
   unsigned long currentMillis = millis();
   
-  // Check for device timeouts
-  for (int i = 0; i < NUM_DEVICES; i++) {
-    if (deviceConnected[i] && (currentMillis - lastTempUpdateTime[i] > tempTimeout)) {
-      deviceConnected[i] = false;
-      Serial.print("Device ");
-      Serial.print(i + 1);
-      Serial.println(" disconnected (timeout)");
-      
-      // Update fan speed when a device disconnects
-      updateFanSpeed();
-    }
-  }
+  // Check for device timeouts - removed old timeout logic
+  // Now using missed polls counter instead of time-based timeout
   
   // If we're not currently polling and it's time to poll
   if (currentPollingDevice == -1 && currentMillis - lastPollTime >= pollInterval) {
@@ -325,6 +350,24 @@ void pollDevices() {
         Serial.print("Device ");
         Serial.print(currentPollingDevice + 1);
         Serial.println(" did not respond");
+        
+        // Increment missed polls counter
+        missedPolls[currentPollingDevice]++;
+        Serial.print("Device ");
+        Serial.print(currentPollingDevice + 1);
+        Serial.print(" missed polls: ");
+        Serial.println(missedPolls[currentPollingDevice]);
+        
+        // Check if device should be considered disconnected
+        if (missedPolls[currentPollingDevice] >= maxMissedPolls && deviceConnected[currentPollingDevice]) {
+          deviceConnected[currentPollingDevice] = false;
+          Serial.print("Device ");
+          Serial.print(currentPollingDevice + 1);
+          Serial.println(" disconnected (too many missed polls)");
+          
+          // Update fan speed when a device disconnects
+          updateFanSpeed();
+        }
       }
 
       // Move to next device
@@ -397,6 +440,9 @@ void setup() {
   Serial.print("°C - ");
   Serial.print(NVME_TEMP_MAX);
   Serial.println("°C");
+  Serial.print("Fan curve: Parabolic (exponent = ");
+  Serial.print(FAN_CURVE_EXPONENT);
+  Serial.println(") for more aggressive cooling at high temps");
 }
 
 void loop() {
