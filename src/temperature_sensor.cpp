@@ -1,6 +1,7 @@
 #include "temperature_sensor.h"
+#include "fan_controller.h"  // Include after forward declaration
 
-TemperatureSensor::TemperatureSensor() {
+TemperatureSensor::TemperatureSensor() : fanController(nullptr) {
     for (int i = 0; i < NUM_DEVICES; i++) {
         deviceTemps[i] = {0.0, 0.0, false, 0};
         deviceConnected[i] = false;
@@ -10,6 +11,10 @@ TemperatureSensor::TemperatureSensor() {
 
 void TemperatureSensor::begin() {
     Serial.println("Temperature sensor initialized");
+}
+
+void TemperatureSensor::setFanController(FanController* fc) {
+    fanController = fc;
 }
 
 bool TemperatureSensor::parseTemperatureData(int deviceId, const String& data) {
@@ -47,6 +52,11 @@ bool TemperatureSensor::parseTemperatureData(int deviceId, const String& data) {
         Serial.print("°C, NVME: ");
         Serial.print(nvmeTemp);
         Serial.println("°C");
+        
+        // IMPORTANT: Update fan speed immediately based on new temperature data
+        if (fanController) {
+            fanController->updateFanSpeed(*this);
+        }
         
         return true;
     }
@@ -100,6 +110,11 @@ void TemperatureSensor::handleMissedPoll(int deviceId) {
             Serial.print("Device ");
             Serial.print(deviceId + 1);
             Serial.println(" disconnected (too many missed polls)");
+            
+            // IMPORTANT: Update fan speed when a device disconnects
+            if (fanController) {
+                fanController->updateFanSpeed(*this);
+            }
         }
     }
 }

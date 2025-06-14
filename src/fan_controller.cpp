@@ -1,4 +1,5 @@
 #include "fan_controller.h"
+#include "temperature_sensor.h"  // Include after forward declaration
 #include <math.h>
 
 FanController::FanController() : currentPwmValue(FAN_SPEED_MIN) {

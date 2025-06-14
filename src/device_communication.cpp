@@ -165,6 +165,12 @@ void DeviceCommunication::processSerialResponse(int deviceId, const String& resp
 }
 
 void DeviceCommunication::checkIncomingData() {
+    // Only check for incoming data when we're not currently polling
+    // During polling, only the current device is listening
+    if (currentPollingDevice != -1) {
+        return; // Skip if we're in the middle of polling
+    }
+    
     // Check for direct commands from devices (outside of polling)
     for (int i = 0; i < NUM_DEVICES; i++) {
         if (devices[i]->available()) {

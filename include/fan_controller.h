@@ -3,7 +3,9 @@
 
 #include <Arduino.h>
 #include "config.h"
-#include "temperature_sensor.h"
+
+// Forward declaration to avoid circular dependency
+class TemperatureSensor;
 
 class FanController {
 private:

@@ -19,6 +19,11 @@ void setup() {
     tachometer.begin();
     tempSensor.begin();
     fanController.begin();
+    
+    // IMPORTANT: Set up cross-module communication
+    // Temperature sensor will immediately update fan when new data arrives
+    tempSensor.setFanController(&fanController);
+    
     deviceComm.begin(&tempSensor);
     
     // Log system initialization
@@ -48,7 +53,8 @@ void loop() {
     // Poll devices for temperature data
     deviceComm.pollDevices();
     
-    // Update fan speed based on temperature data
+    // Fan speed is now updated immediately in temperature sensor callbacks
+    // But we keep this call as a safety backup in case of any issues
     fanController.updateFanSpeed(tempSensor);
     
     // Check for direct commands from devices (outside of polling)

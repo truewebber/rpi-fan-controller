@@ -10,7 +10,7 @@ const int TACH_PIN = 3;       // Tachometer input from the fan
 
 // --- SoftwareSerial Pin Definitions ---
 // Device 1 - RX: 4, TX: 5
-// Device 2 - RX: 6, TX: 7  
+// Device 2 - RX: 6, TX: 7
 // Device 3 - RX: 8, TX: 10
 // Device 4 - RX: 11, TX: 12
 const int DEVICE1_RX_PIN = 4;

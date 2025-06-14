@@ -11,17 +11,24 @@ struct TemperatureData {
     unsigned long lastUpdateTime;
 };
 
+// Forward declaration to avoid circular dependency
+class FanController;
+
 class TemperatureSensor {
 private:
     TemperatureData deviceTemps[NUM_DEVICES];
     bool deviceConnected[NUM_DEVICES];
     int missedPolls[NUM_DEVICES];
+    FanController* fanController;  // Callback to fan controller
 
 public:
     TemperatureSensor();
     
     // Initialize temperature sensor
     void begin();
+    
+    // Set fan controller for immediate updates
+    void setFanController(FanController* fc);
     
     // Parse temperature data from device response
     bool parseTemperatureData(int deviceId, const String& data);
