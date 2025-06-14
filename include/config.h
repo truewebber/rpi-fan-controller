@@ -44,6 +44,6 @@ const float FAN_CURVE_EXPONENT = 2.5;           // Parabolic curve exponent
 
 // --- Timing Constants ---
 const unsigned long RPM_CALC_INTERVAL = 1000;   // Calculate RPM every 1000ms
-const int PORT_SWITCH_DELAY = 10;               // 10ms delay for port switching
+const int PORT_SWITCH_DELAY = 50;               // 50ms delay for port switching (increased for stability)
 
 #endif // CONFIG_H

@@ -44,29 +44,29 @@ print_status "Raspberry Pi Model: $(cat /proc/device-tree/model 2>/dev/null || e
 print_status "Kernel: $(uname -r)"
 print_status "Date: $(date)"
 
-# 2. Check /boot/config.txt for UART settings
-print_header "Boot Configuration (/boot/config.txt)"
-if [ -f "/boot/config.txt" ]; then
+# 2. Check /boot/firmware/config.txt for UART settings
+print_header "Boot Configuration (/boot/firmware/config.txt)"
+if [ -f "/boot/firmware/config.txt" ]; then
     echo "Relevant UART settings:"
-    grep -E "(enable_uart|dtoverlay.*uart)" /boot/config.txt || echo "No UART settings found"
+    grep -E "(enable_uart|dtoverlay.*uart)" /boot/firmware/config.txt || echo "No UART settings found"
     
     # Check if UART is enabled
-    if grep -q "enable_uart=1" /boot/config.txt; then
-        print_success "UART is enabled in /boot/config.txt"
+    if grep -q "enable_uart=1" /boot/firmware/config.txt; then
+        print_success "UART is enabled in /boot/firmware/config.txt"
     else
-        print_error "UART is NOT enabled in /boot/config.txt"
-        echo "Add this line to /boot/config.txt: enable_uart=1"
+        print_error "UART is NOT enabled in /boot/firmware/config.txt"
+        echo "Add this line to /boot/firmware/config.txt: enable_uart=1"
     fi
     
     # Check for Bluetooth disable
-    if grep -q "dtoverlay=disable-bt" /boot/config.txt; then
+    if grep -q "dtoverlay=disable-bt" /boot/firmware/config.txt; then
         print_success "Bluetooth is disabled (good for UART)"
     else
         print_warning "Bluetooth is NOT disabled - this may interfere with UART"
         echo "Consider adding: dtoverlay=disable-bt"
     fi
 else
-    print_error "/boot/config.txt not found"
+    print_error "/boot/firmware/config.txt not found"
 fi
 
 # 3. Check available serial devices
@@ -175,7 +175,7 @@ echo "  TX from Pi (3.3V) to Arduino RX (5V) usually works directly"
 
 # 9. Suggested fixes
 print_header "Suggested Fixes for Non-Working Devices"
-echo "1. Check /boot/config.txt and add if missing:"
+echo "1. Check /boot/firmware/config.txt and add if missing:"
 echo "   enable_uart=1"
 echo "   dtoverlay=disable-bt"
 echo ""

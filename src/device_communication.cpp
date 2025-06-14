@@ -103,7 +103,15 @@ void DeviceCommunication::pollDevices() {
                 incomingData[currentPollingDevice] = "";
                 deviceResponded[currentPollingDevice] = true;
             } else if (c != '\r') {
-                incomingData[currentPollingDevice] += c;
+                // Prevent buffer overflow - limit message length
+                if (incomingData[currentPollingDevice].length() < 64) {
+                    incomingData[currentPollingDevice] += c;
+                } else {
+                    // Buffer overflow protection - reset and ignore
+                    incomingData[currentPollingDevice] = "";
+                    Serial.print("Buffer overflow on device ");
+                    Serial.println(currentPollingDevice + 1);
+                }
             }
         }
 
@@ -150,6 +158,13 @@ void DeviceCommunication::processSerialResponse(int deviceId, const String& resp
     // Clean the response by removing any whitespace and line endings
     String cleanResponse = response;
     cleanResponse.trim();
+    
+    // Validate response format and length
+    if (cleanResponse.length() > 32 || cleanResponse.length() < 6) {
+        Serial.print("Invalid response length from device ");
+        Serial.println(deviceId + 1);
+        return;
+    }
     
     // CPU:xx.x|NVME:xx.x (temperature data)
     if (cleanResponse.startsWith("CPU:") && cleanResponse.indexOf("|NVME:") != -1) {
