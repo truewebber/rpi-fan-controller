@@ -140,15 +140,10 @@ void parseTemperatureData(int deviceId, String data) {
 void updateFanSpeed() {
   float highestCpuTemp = 0.0;
   float highestNvmeTemp = 0.0;
-  bool anyDeviceConnected = false;
   bool anyTemperatureData = false;
   
   // Find the highest temperatures among all devices (using last saved values)
   for (int i = 0; i < NUM_DEVICES; i++) {
-    if (deviceConnected[i]) {
-      anyDeviceConnected = true;
-    }
-    
     // Use saved temperature values even if device is currently disconnected
     if (cpuTemps[i] > 0.0 || nvmeTemps[i] > 0.0) {
       anyTemperatureData = true;
